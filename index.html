@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- Keep the inline script hash in sync if that script changes. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-SOkTy9/9OgmfgG5jYBqHfkcarbmCTaWzUJ3GbNUOKh4='; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Safe Mark Doc</title>
+  <meta name="description" data-i18n-attr="content:meta.description" content="Añade marcas de agua resistentes a tu DNI, contratos o facturas antes de compartirlos. Sin subir nada: todo ocurre en tu dispositivo.">
+  <meta name="theme-color" content="#07090d">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Safe Mark Doc">
+  <script>
+    // Apply saved theme and language before first paint to avoid a flash.
+    try {
+      const prefs = JSON.parse(localStorage.getItem('ms-ui-v1') || '{}');
+      if (prefs.theme === 'light' || prefs.theme === 'dark') document.documentElement.dataset.theme = prefs.theme;
+      if (prefs.lang) document.documentElement.lang = prefs.lang;
+    } catch {}
+  </script>
+  <link rel="preload" href="vendor/fonts/dm-sans-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="vendor/fonts/space-grotesk-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#top" aria-label="Safe Mark Doc">
+        <span class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="logo-doc" d="M6 3h8l4 4v14H6z"/><path class="logo-check" d="M9 13l2 2 4-4"/></svg>
+        </span>
+        <span class="brand-name">Safe Mark Doc</span>
+      </a>
+      <nav class="nav" data-i18n-attr="aria-label:nav.aria">
+        <a href="#tool" data-i18n="nav.tool">Herramienta</a>
+        <a href="#how" data-i18n="nav.how">Cómo funciona</a>
+        <a href="#faq" data-i18n="nav.faq">Preguntas</a>
+      </nav>
+      <div class="topbar-actions">
+        <span id="net-status" class="pill" data-i18n-attr="title:top.netTitle"></span>
+        <label class="lang-select">
+          <span class="visually-hidden" data-i18n="top.language">Idioma</span>
+          <select id="lang-select">
+            <option value="es">ES</option>
+            <option value="en">EN</option>
+          </select>
+        </label>
+        <button type="button" id="theme-btn" class="icon-btn">
+          <svg class="i-auto" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>
+          <svg class="i-light" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <svg class="i-dark" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        </button>
+        <button id="install-btn" class="btn" hidden data-i18n="top.install">Instalar app</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap" id="top">
+    <section class="hero">
+      <span class="eyebrow" data-i18n="hero.eyebrow">100&nbsp;% local · sin subidas · sin cuenta · sin rastreo</span>
+      <h1 data-i18n-html="hero.title">Pon marca de agua a tus documentos<br>antes de compartirlos</h1>
+      <p class="lead" data-i18n="hero.lead">Marca tu DNI, pasaporte, contratos y facturas con para quién es la copia, cuándo se hizo y un código de rastreo único, todo en tu navegador.</p>
+      <div class="cta">
+        <a class="btn primary" href="#tool" data-i18n="hero.ctaPrimary">Añadir marca de agua — Gratis</a>
+        <a class="btn" href="#how" data-i18n="hero.ctaSecondary">Cómo funciona</a>
+      </div>
+      <p class="fine" data-i18n="hero.fine">Imágenes y PDF · Resultado aplanado · Sin metadatos · Funciona sin conexión</p>
+    </section>
+
+    <section class="bench" id="tool" data-i18n-attr="aria-label:bench.aria">
+      <!-- Left: document and watermark text -->
+      <div class="panel controls" role="group" data-i18n-attr="aria-label:controls.aria">
+        <h2 class="label" data-i18n="bench.document">Documento</h2>
+        <label class="dropzone" id="dropzone">
+          <input id="file-input" type="file" accept="image/*,application/pdf" multiple>
+          <span class="dz-title" data-i18n="drop.title">Arrastra aquí tu documento</span>
+          <span class="dz-sub" data-i18n="drop.sub">o pulsa para elegir · JPG, PNG, WEBP o PDF · también puedes pegar (Ctrl+V)</span>
+        </label>
+
+        <fieldset>
+          <legend class="label" data-i18n="text.legend">Texto de la marca</legend>
+          <label class="field">
+            <span data-i18n="text.label">¿Para quién y para qué?</span>
+            <input id="wm-text" type="text" maxlength="120" data-i18n-attr="placeholder:text.placeholder" placeholder="Ej.: Solo para Banco X · apertura de cuenta">
+          </label>
+          <div class="chips" id="presets" data-i18n-attr="aria-label:presets.aria">
+            <button type="button" class="chip" data-preset="identity" data-i18n="preset.identity.label">Verificación de identidad</button>
+            <button type="button" class="chip" data-preset="rental" data-i18n="preset.rental.label">Alquiler</button>
+            <button type="button" class="chip" data-preset="bank" data-i18n="preset.bank.label">Banco</button>
+            <button type="button" class="chip" data-preset="job" data-i18n="preset.job.label">Empleo</button>
+            <button type="button" class="chip" data-preset="copy" data-i18n="preset.copy.label">Copia no válida</button>
+          </div>
+          <div class="toggles">
+            <label class="check"><input id="opt-date" type="checkbox" checked> <span data-i18n="opt.date">Añadir fecha</span></label>
+            <label class="check"><input id="opt-trace" type="checkbox" checked> <span data-i18n="opt.trace">Código de rastreo</span></label>
+          </div>
+          <div class="trace-row" id="trace-row">
+            <code id="trace-code" data-i18n-attr="title:trace.title"></code>
+            <button type="button" class="btn small" id="trace-regen" data-i18n="trace.regen">Nuevo código</button>
+          </div>
+          <p class="hint" data-i18n="trace.hint">Usa un código distinto para cada destinatario: si aparece una copia filtrada sabrás de dónde salió.</p>
+        </fieldset>
+      </div>
+
+      <!-- Center: live preview and redaction -->
+      <div class="panel preview" role="region" data-i18n-attr="aria-label:preview.aria">
+        <div class="preview-head">
+          <h2 class="label" data-i18n="preview.title">Vista previa</h2>
+          <div class="pager" id="pager" hidden>
+            <button type="button" class="btn small ghost" id="prev-page" data-i18n-attr="aria-label:preview.prev">‹</button>
+            <span id="page-label"></span>
+            <button type="button" class="btn small ghost" id="next-page" data-i18n-attr="aria-label:preview.next">›</button>
+          </div>
+          <button type="button" class="btn small" id="clear-btn" hidden data-i18n="preview.clear">Quitar</button>
+        </div>
+        <div class="stage" id="stage">
+          <div class="empty" id="empty">
+            <svg viewBox="0 0 120 90" aria-hidden="true"><rect x="6" y="8" width="108" height="74" rx="8" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="34" cy="38" r="12" fill="none" stroke="currentColor" stroke-width="3"/><path d="M20 66c4-9 24-9 28 0M60 32h40M60 44h32M60 56h36" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M8 70 112 20" stroke="currentColor" stroke-width="2" stroke-dasharray="4 5" opacity=".6"/></svg>
+            <p data-i18n="preview.empty">Elige un documento para ver aquí cómo quedará.</p>
+          </div>
+          <canvas id="preview-canvas" hidden></canvas>
+          <div class="busy" id="busy" hidden><span class="spinner"></span><span id="busy-label" data-i18n="busy.default">Procesando…</span></div>
+        </div>
+        <div class="redact-bar" id="redact-bar" hidden>
+          <span class="redact-label" data-i18n="redact.label">Ocultar datos</span>
+          <div class="segmented compact" id="redact-mode" role="radiogroup" data-i18n-attr="aria-label:redact.aria">
+            <label data-i18n-attr="title:redact.none.title"><input type="radio" name="redact" value="none" checked> <span data-i18n="redact.none">Ver</span></label>
+            <label data-i18n-attr="title:redact.box.title"><input type="radio" name="redact" value="box"> <span data-i18n="redact.box">Tapar</span></label>
+            <label data-i18n-attr="title:redact.blur.title"><input type="radio" name="redact" value="blur"> <span data-i18n="redact.blur">Desenfocar</span></label>
+            <label data-i18n-attr="title:redact.pixelate.title"><input type="radio" name="redact" value="pixelate"> <span data-i18n="redact.pixelate">Pixelar</span></label>
+          </div>
+          <div class="redact-actions">
+            <button type="button" class="btn small ghost" id="redact-undo" disabled data-i18n="redact.undo">Deshacer</button>
+            <button type="button" class="btn small ghost danger" id="redact-delete" disabled data-i18n="redact.delete">Eliminar zona</button>
+          </div>
+        </div>
+        <p class="hint redact-hint" id="redact-hint" hidden></p>
+      </div>
+
+      <!-- Right: appearance, protection and export -->
+      <div class="panel settings" role="group" data-i18n-attr="aria-label:settings.aria">
+        <fieldset>
+          <legend class="label" data-i18n="look.legend">Aspecto</legend>
+          <div class="row">
+            <label class="field color">
+              <span class="visually-hidden" data-i18n="look.color">Color</span>
+              <input id="wm-color" type="color" value="#c0262d">
+            </label>
+            <div class="swatches" id="swatches">
+              <button type="button" style="--c:#c0262d" data-color="#c0262d" data-i18n-attr="aria-label:color.red"></button>
+              <button type="button" style="--c:#1d4ed8" data-color="#1d4ed8" data-i18n-attr="aria-label:color.blue"></button>
+              <button type="button" style="--c:#111827" data-color="#111827" data-i18n-attr="aria-label:color.black"></button>
+              <button type="button" style="--c:#6b7280" data-color="#6b7280" data-i18n-attr="aria-label:color.gray"></button>
+              <button type="button" style="--c:#0f766e" data-color="#0f766e" data-i18n-attr="aria-label:color.green"></button>
+            </div>
+          </div>
+          <label class="field range">
+            <span><span data-i18n="look.opacity">Opacidad</span> <output id="out-opacity"></output></span>
+            <input id="wm-opacity" type="range" min="10" max="80" value="32">
+          </label>
+          <label class="field range">
+            <span><span data-i18n="look.size">Tamaño del texto</span> <output id="out-size"></output></span>
+            <input id="wm-size" type="range" min="2" max="9" step="0.5" value="4">
+          </label>
+          <label class="field range">
+            <span><span data-i18n="look.density">Densidad</span> <output id="out-density"></output></span>
+            <input id="wm-density" type="range" min="1" max="5" value="3">
+          </label>
+          <label class="field range">
+            <span><span data-i18n="look.angle">Ángulo</span> <output id="out-angle"></output></span>
+            <input id="wm-angle" type="range" min="-60" max="60" value="-30">
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend class="label" data-i18n="protect.legend">Protección</legend>
+          <label class="check block">
+            <span data-i18n-html="protect.wave"></span>
+            <input id="opt-wave" type="checkbox" class="switch" checked>
+          </label>
+          <label class="check block">
+            <span data-i18n-html="protect.guilloche"></span>
+            <input id="opt-guilloche" type="checkbox" class="switch" checked>
+          </label>
+          <label class="check block">
+            <span data-i18n-html="protect.micro"></span>
+            <input id="opt-micro" type="checkbox" class="switch" checked>
+          </label>
+          <p class="hint" data-i18n="protect.hint"></p>
+        </fieldset>
+
+        <fieldset>
+          <legend class="label" data-i18n="export.legend">Exportar</legend>
+          <div class="segmented formats" id="format" role="radiogroup" data-i18n-attr="aria-label:export.format">
+            <label><input type="radio" name="format" value="pdf"> PDF</label>
+            <label><input type="radio" name="format" value="jpeg" checked> JPG</label>
+            <label><input type="radio" name="format" value="png"> PNG</label>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn primary block" id="download-btn" disabled data-i18n="export.download">Descargar</button>
+            <button type="button" class="btn block" id="share-btn" disabled hidden data-i18n="export.share">Compartir…</button>
+          </div>
+        </fieldset>
+      </div>
+    </section>
+
+    <section class="panel log" data-i18n-attr="aria-label:log.aria">
+      <div class="preview-head">
+        <h2 class="label" data-i18n="log.title">Registro de copias</h2>
+        <span class="fine log-note" data-i18n="log.hint">Se guarda solo en este navegador. Te ayuda a saber a quién diste cada código.</span>
+        <button type="button" class="btn small ghost" id="log-clear" hidden data-i18n="log.clear">Borrar registro</button>
+      </div>
+      <ul id="log-list" class="log-list"></ul>
+    </section>
+
+    <section class="page-section" id="how">
+      <h2 class="section-title" data-i18n="steps.title">Suelta, marca, comparte</h2>
+      <ol class="steps">
+        <li class="step">
+          <span class="num" aria-hidden="true">1</span>
+          <h3 data-i18n="steps.1.title">Suelta tu documento</h3>
+          <p data-i18n="steps.1.text">Imágenes o PDF, incluidos los protegidos con contraseña y los de varias páginas.</p>
+        </li>
+        <li class="step">
+          <span class="num" aria-hidden="true">2</span>
+          <h3 data-i18n="steps.2.title">Marca y oculta datos</h3>
+          <p data-i18n="steps.2.text">Indica para quién es, añade un código de rastreo y oculta los campos que no necesitan.</p>
+        </li>
+        <li class="step">
+          <span class="num" aria-hidden="true">3</span>
+          <h3 data-i18n="steps.3.title">Exporta una copia segura</h3>
+          <p data-i18n="steps.3.text">PDF, JPG o PNG aplanado y sin metadatos, listo para compartir.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="page-section faq" id="faq">
+      <h2 class="section-title" data-i18n="faq.title">Preguntas frecuentes</h2>
+      <details class="q">
+        <summary data-i18n="faq.local.q">¿Se suben mis archivos a algún sitio?</summary>
+        <p data-i18n="faq.local.a">No. Todo se procesa en tu navegador con la API Canvas: no hay servidor, ni cuentas, ni subidas. Las preferencias y el registro de copias se guardan solo en el almacenamiento local de este navegador.</p>
+      </details>
+      <details class="q">
+        <summary data-i18n="faq.removal.q">¿Se puede quitar la marca de agua?</summary>
+        <p data-i18n="faq.removal.a">Ninguna marca es imposible de quitar, pero esta lo pone muy difícil. El resultado se aplana en píxeles, así que la marca no es una capa separable del PDF. El texto ondulado con variaciones por letra, la trama de seguridad y el microtexto dificultan borrarla con herramientas automáticas.</p>
+      </details>
+      <details class="q">
+        <summary data-i18n="faq.trace.q">¿Para qué sirve el código de rastreo?</summary>
+        <p data-i18n="faq.trace.a">Es un código único que se imprime en cada copia. El registro de copias anota a quién diste cada código, así que si aparece una copia filtrada puedes saber de dónde salió. Usa un código distinto para cada destinatario.</p>
+      </details>
+      <details class="q">
+        <summary data-i18n="faq.offline.q">¿Funciona sin conexión?</summary>
+        <p data-i18n="faq.offline.a">Sí. Tras la primera visita, un service worker guarda la aplicación completa en caché. También puedes instalarla como app desde el navegador y usarla sin conexión.</p>
+      </details>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-cols">
+        <div>
+          <div class="brand">
+            <span class="logo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="logo-doc" d="M6 3h8l4 4v14H6z"/><path class="logo-check" d="M9 13l2 2 4-4"/></svg>
+            </span>
+            <span class="brand-name">Safe Mark Doc</span>
+          </div>
+          <p data-i18n="footer.blurb">Marcas de agua sin conexión para documentos sensibles. Cada archivo se procesa en tu navegador y nunca sale de tu dispositivo.</p>
+        </div>
+        <div>
+          <h3 data-i18n="footer.tool">Herramienta</h3>
+          <ul>
+            <li><a href="#tool" data-i18n="footer.watermark">Marca de agua</a></li>
+            <li><a href="#how" data-i18n="nav.how">Cómo funciona</a></li>
+            <li><a href="#faq" data-i18n="nav.faq">Preguntas</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3 data-i18n="footer.export">Exportar</h3>
+          <ul>
+            <li>PDF · JPG · PNG</li>
+            <li data-i18n="footer.share">Menú de compartir</li>
+            <li data-i18n="footer.install">Instalar como app</li>
+          </ul>
+        </div>
+      </div>
+      <p class="legal"><span data-i18n-html="footer.legal"><a href="LICENSE">Licencia MIT</a> · pdf.js Apache 2.0 · fuentes SIL OFL 1.1</span> · <span class="version">v1.1.0</span></p>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

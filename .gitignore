@@ -1,0 +1,36 @@
+# AI agent and assistant files
+.atl/
+odd/
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+GEMINI.md
+.gemini/
+.codex/
+.opencode/
+.pi/
+.cursor/
+.cursorrules
+.windsurf/
+.windsurfrules
+.aider*
+.continue/
+.copilot/
+.github/copilot-instructions.md
+.codegraph/
+graphify-out/
+.playwright-mcp/
+.mcp.json
+.engram/
+openspec/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Dependencies and local tooling
+node_modules/
