@@ -375,6 +375,7 @@ legend + * { clear: both; }
 .dropzone input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .dz-title { font: 700 15px var(--font-display); }
 .dz-sub { font-size: 12.5px; color: var(--text-dim); }
+.camera-btn { margin-top: 10px; }
 
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
 .field > span { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--text-muted); }
@@ -489,6 +490,24 @@ input[type="text"]:focus { outline: none; border-color: var(--accent); box-shado
 
 .hint { margin: 8px 0 0; font-size: 12.5px; color: var(--text-dim); }
 
+/* Copies: stepper and per-copy tracking codes. */
+.copies { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; font-size: 14px; }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--border-strong); border-radius: 10px; overflow: hidden; }
+.stepper button { width: 34px; height: 32px; padding: 0; font-size: 16px; color: var(--text); background: transparent; border: 0; cursor: pointer; }
+.stepper button:hover:not(:disabled) { color: var(--accent); background: var(--accent-soft); }
+.stepper button:disabled { opacity: .45; cursor: not-allowed; }
+.stepper button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.stepper output { min-width: 34px; text-align: center; font: 600 14px var(--font-mono); color: var(--accent); font-variant-numeric: tabular-nums; }
+.codes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.codes code {
+  padding: 3px 8px;
+  font: 600 12px var(--font-mono);
+  color: var(--accent);
+  background: var(--bg-code);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
 /* Appearance */
 .row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .row .field { margin-bottom: 0; }
@@ -515,6 +534,13 @@ input[type="text"]:focus { outline: none; border-color: var(--accent); box-shado
   cursor: pointer;
 }
 .swatches button.active { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Auto contrast swatch: half white, half black (literal colours, not theme tokens). */
+.swatches button.sw-auto { background: linear-gradient(135deg, #fff 50%, #000 50%); }
+.swatch-hint { margin: -4px 0 12px; }
+
+/* Small checkbox next to a field label (random angle). */
+.check.mini { gap: 6px; font-size: 12.5px; color: var(--text-muted); }
+input[type="range"]:disabled { opacity: .4; cursor: not-allowed; }
 
 input[type="range"] {
   appearance: none;
@@ -570,6 +596,19 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px var(
 }
 .segmented.formats label:has(input:checked) { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
 
+.segmented.tones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 2px; }
+.segmented.tones label {
+  padding: 8px 0;
+  text-align: center;
+  font: 600 12.5px var(--font-body);
+  color: var(--text-muted);
+  background: var(--bg-code);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+}
+.segmented.tones label:has(input:checked) { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+.tone-hint { margin: -4px 0 0; }
+
 .segmented.compact {
   padding: 3px;
   border: 1px solid var(--border-strong);
@@ -582,7 +621,7 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px var(
 
 /* ---------- Preview ---------- */
 
-.preview-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.preview-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
 .preview-head .label { flex: 1; margin: 0; }
 .pager {
   display: flex;

@@ -80,6 +80,9 @@
           <span class="dz-title" data-i18n="drop.title">Arrastra aquí tu documento</span>
           <span class="dz-sub" data-i18n="drop.sub">o pulsa para elegir · JPG, PNG, WEBP o PDF · también puedes pegar (Ctrl+V)</span>
         </label>
+        <input id="camera-input" type="file" accept="image/*" capture="environment" hidden>
+        <button type="button" class="btn block camera-btn" id="camera-btn" hidden><span aria-hidden="true">📷</span> <span data-i18n="camera.take">Hacer una foto</span></button>
+        <p class="hint" id="camera-hint" hidden data-i18n="camera.hint">Abre la cámara trasera en móviles y tabletas. Oculto en dispositivos sin cámara.</p>
 
         <fieldset>
           <legend class="label" data-i18n="text.legend">Texto de la marca</legend>
@@ -102,7 +105,18 @@
             <code id="trace-code" data-i18n-attr="title:trace.title"></code>
             <button type="button" class="btn small" id="trace-regen" data-i18n="trace.regen">Nuevo código</button>
           </div>
-          <p class="hint" data-i18n="trace.hint">Usa un código distinto para cada destinatario: si aparece una copia filtrada sabrás de dónde salió.</p>
+          <div class="copies-block" id="copies-block">
+            <div class="copies">
+              <span id="copies-label" data-i18n="copies.label">Copias</span>
+              <span class="stepper" role="group" aria-labelledby="copies-label">
+                <button type="button" id="copies-dec" data-i18n-attr="aria-label:copies.less">−</button>
+                <output id="copies-count" aria-live="polite">1</output>
+                <button type="button" id="copies-inc" data-i18n-attr="aria-label:copies.more">+</button>
+              </span>
+            </div>
+            <div class="codes" id="copies-codes" hidden></div>
+            <p class="hint" data-i18n="copies.hint">Cada copia lleva su propio código de rastreo (hasta 20). Da uno a cada destinatario; todas las copias se guardan en el registro de copias.</p>
+          </div>
         </fieldset>
       </div>
 
@@ -114,6 +128,11 @@
             <button type="button" class="btn small ghost" id="prev-page" data-i18n-attr="aria-label:preview.prev">‹</button>
             <span id="page-label"></span>
             <button type="button" class="btn small ghost" id="next-page" data-i18n-attr="aria-label:preview.next">›</button>
+          </div>
+          <div class="pager" id="copy-pager" hidden>
+            <button type="button" class="btn small ghost" id="prev-copy" data-i18n-attr="aria-label:copies.prev">‹</button>
+            <span id="copy-label"></span>
+            <button type="button" class="btn small ghost" id="next-copy" data-i18n-attr="aria-label:copies.next">›</button>
           </div>
           <button type="button" class="btn small" id="clear-btn" hidden data-i18n="preview.clear">Quitar</button>
         </div>
@@ -151,6 +170,7 @@
               <input id="wm-color" type="color" value="#c0262d">
             </label>
             <div class="swatches" id="swatches">
+              <button type="button" class="sw-auto" id="swatch-auto" data-i18n-attr="aria-label:color.auto;title:color.auto"></button>
               <button type="button" style="--c:#c0262d" data-color="#c0262d" data-i18n-attr="aria-label:color.red"></button>
               <button type="button" style="--c:#1d4ed8" data-color="#1d4ed8" data-i18n-attr="aria-label:color.blue"></button>
               <button type="button" style="--c:#111827" data-color="#111827" data-i18n-attr="aria-label:color.black"></button>
@@ -158,6 +178,7 @@
               <button type="button" style="--c:#0f766e" data-color="#0f766e" data-i18n-attr="aria-label:color.green"></button>
             </div>
           </div>
+          <p class="hint swatch-hint" data-i18n-html="look.autoHint"></p>
           <label class="field range">
             <span><span data-i18n="look.opacity">Opacidad</span> <output id="out-opacity"></output></span>
             <input id="wm-opacity" type="range" min="10" max="80" value="32">
@@ -170,10 +191,23 @@
             <span><span data-i18n="look.density">Densidad</span> <output id="out-density"></output></span>
             <input id="wm-density" type="range" min="1" max="5" value="3">
           </label>
-          <label class="field range">
-            <span><span data-i18n="look.angle">Ángulo</span> <output id="out-angle"></output></span>
-            <input id="wm-angle" type="range" min="-60" max="60" value="-30">
-          </label>
+          <div class="field range">
+            <span>
+              <span><span data-i18n="look.angle">Ángulo</span> <output id="out-angle"></output></span>
+              <label class="check mini"><input id="opt-random-angle" type="checkbox"> <span data-i18n="look.randomAngle">Aleatorio</span></label>
+            </span>
+            <input id="wm-angle" type="range" min="-60" max="60" value="-30" data-i18n-attr="aria-label:look.angle">
+          </div>
+          <div class="field">
+            <span id="tone-label" data-i18n="look.tone">Tono del documento</span>
+            <div class="segmented tones" id="tone" role="radiogroup" aria-labelledby="tone-label">
+              <label><input type="radio" name="tone" value="color" checked> <span data-i18n="tone.color">Color</span></label>
+              <label><input type="radio" name="tone" value="gray"> <span data-i18n="tone.gray">Gris</span></label>
+              <label><input type="radio" name="tone" value="bw"> <span data-i18n="tone.bw">B/N</span></label>
+              <label><input type="radio" name="tone" value="bw-dither"> <span data-i18n="tone.dither">Tramado</span></label>
+            </div>
+          </div>
+          <p class="hint tone-hint" data-i18n="look.toneHint">Las copias en blanco y negro son más difíciles de reutilizar como un original convincente.</p>
         </fieldset>
 
         <fieldset>
@@ -190,6 +224,15 @@
             <span data-i18n-html="protect.micro"></span>
             <input id="opt-micro" type="checkbox" class="switch" checked>
           </label>
+          <label class="check block">
+            <span data-i18n-html="protect.warp"></span>
+            <input id="opt-warp" type="checkbox" class="switch">
+          </label>
+          <label class="check block">
+            <span data-i18n-html="protect.contours"></span>
+            <input id="opt-contours" type="checkbox" class="switch">
+          </label>
+          <p class="hint" data-i18n="protect.secret"></p>
           <p class="hint" data-i18n="protect.hint"></p>
         </fieldset>
 
@@ -288,7 +331,7 @@
           </ul>
         </div>
       </div>
-      <p class="legal"><span data-i18n-html="footer.legal"><a href="LICENSE">Licencia MIT</a> · pdf.js Apache 2.0 · fuentes SIL OFL 1.1</span> · <span class="version">v1.1.0</span></p>
+      <p class="legal"><span data-i18n-html="footer.legal"><a href="LICENSE">Licencia MIT</a> · pdf.js Apache 2.0 · fuentes SIL OFL 1.1</span> · <span class="version">v1.2.0</span></p>
     </div>
   </footer>
 

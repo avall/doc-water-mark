@@ -1,5 +1,5 @@
 // Service worker: precaches the whole app so it works fully offline.
-const VERSION = '1.1.0'; // Semantic Versioning (https://semver.org)
+const VERSION = '1.2.0'; // Semantic Versioning (https://semver.org)
 const APP_CACHE = `safe-mark-doc-v${VERSION}`;
 const SHARE_CACHE = 'share-target';
 
@@ -9,7 +9,9 @@ const ASSETS = [
   'styles.css',
   'app.js',
   'js/watermark.js',
+  'js/filters.js',
   'js/pdf-writer.js',
+  'js/zip.js',
   'js/redact.js',
   'js/i18n.js',
   'vendor/pdfjs/pdf.min.mjs',
