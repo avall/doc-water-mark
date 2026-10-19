@@ -84,7 +84,7 @@ const MESSAGES = {
     'protect.micro': '<strong>Microtexto</strong><br><small>Líneas diminutas con el código de rastreo entre filas.</small>',
     'protect.warp': '<strong>Distorsiones aleatorias</strong><br><small>Curva el texto en puntos aleatorios para que las herramientas de borrado no puedan ajustarlo.</small>',
     'protect.contours': '<strong>Líneas de contorno en color</strong><br><small>Conserva el color original solo a lo largo de líneas aleatorias; el resto pasa a gris.</small>',
-    'protect.secret': 'Cada exportación usa un patrón aleatorio secreto, así que una copia no se puede reconstruir a partir del texto visible.',
+    'protect.secret': 'Cada documento y cada copia usan su propio patrón aleatorio secreto, así que una copia no se puede reconstruir a partir del texto visible.',
     'protect.hint': 'El resultado se “aplana” en una imagen: la marca no es una capa que se pueda quitar del PDF. También se eliminan los metadatos (GPS, cámara…).',
 
     'export.legend': 'Exportar',
@@ -276,7 +276,7 @@ const MESSAGES = {
     'protect.micro': '<strong>Microtext</strong><br><small>Tiny lines with the tracking code between rows.</small>',
     'protect.warp': '<strong>Random distortions</strong><br><small>Bends the text in random spots so removal tools cannot match it.</small>',
     'protect.contours': '<strong>Colour contour lines</strong><br><small>Keeps the original colour only along random lines; the rest turns gray.</small>',
-    'protect.secret': 'Every export uses a secret random pattern, so a copy cannot be rebuilt from the visible text.',
+    'protect.secret': 'Each document and each copy use their own secret random pattern, so a copy cannot be rebuilt from the visible text.',
     'protect.hint': 'The result is “flattened” into an image: the watermark is not a layer that can be removed from the PDF. Metadata (GPS, camera…) is stripped too.',
 
     'export.legend': 'Export',
