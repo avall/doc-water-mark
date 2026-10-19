@@ -11,8 +11,13 @@ Sending a plain copy of your ID to a landlord, a hotel or an online service make
 ## Features
 
 - **Inputs** — images (JPG, PNG, WebP, …) and PDFs, including password-protected PDFs. Multiple files and multi-page documents in one go.
+- **Camera capture** — on phones and tablets, take a photo of the document with the rear camera.
 - **Watermark content** — custom text, optional date and an optional unique trace code per copy. A local log records which code was given to whom, so a leaked copy can be traced back.
-- **Hard-to-remove patterns** — wavy text with per-letter variation, alternating filled/outlined rows, guilloché-style background mesh and microtext.
+- **Multiple copies** — export up to 20 copies at once, each with its own trace code, packaged as a ZIP (or shared together when the platform allows it).
+- **Hard-to-remove patterns** — wavy text that follows several combined waves with per-letter variation, alternating filled/outlined rows, guilloché-style background mesh and microtext. Optional random distortions bend the text in random spots, and an optional random angle.
+- **Secret per-copy pattern** — every copy uses a secret random salt, so the overlay cannot be regenerated from the visible text and subtracted.
+- **Auto contrast** — the watermark turns black or white letter by letter depending on the document underneath.
+- **Document tone** — keep colour or turn the document gray, black-and-white or dithered black-and-white; optionally keep the original colour only along random contour lines.
 - **Redaction** — cover, blur or pixelate sensitive areas by dragging over the preview, page by page.
 - **Safe output** — the result is flattened (rasterized) and stripped of EXIF metadata. Export to PDF, JPG or PNG.
 - **Sharing** — native share sheet (Web Share API) and Android _share target_, so you can send files to the app straight from other apps.
@@ -83,6 +88,8 @@ The app will be available at `https://<user>.github.io/<repo>/`. All paths are r
 ├── LICENSE                # MIT license (also published with the app)
 ├── js/
 │   ├── watermark.js       # Watermark rendering engine (canvas)
+│   ├── filters.js         # Tone filters (gray, B&W, dithering), noise and contour lines
+│   ├── zip.js             # Minimal store-only ZIP writer (multiple copies)
 │   ├── redact.js          # Redaction: cover, blur, pixelate
 │   ├── pdf-writer.js      # Minimal PDF writer (one JPEG per page)
 │   └── i18n.js            # UI strings and language handling

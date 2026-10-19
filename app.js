@@ -1,5 +1,6 @@
-import { drawWatermark } from './js/watermark.js';
+import { createSalt, renderProtected } from './js/watermark.js';
 import { buildPdf } from './js/pdf-writer.js';
+import { buildZip } from './js/zip.js';
 import { applyRedactions, hitTest, toPixels } from './js/redact.js';
 import { detectLanguage, getLanguage, getLocale, LANGUAGES, setLanguage, t, translateDom } from './js/i18n.js';
 
@@ -13,12 +14,17 @@ const UI_KEY = 'ms-ui-v1'; // theme + language; also read by the inline script i
 const THEMES = ['auto', 'light', 'dark'];
 const SHARE_CACHE = 'share-target';
 const TRACE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I ambiguity
+const MAX_COPIES = 20;
+const TONES = ['color', 'gray', 'bw', 'bw-dither'];
 
 const $ = (id) => document.getElementById(id);
 
 const ui = {
   fileInput: $('file-input'),
   dropzone: $('dropzone'),
+  cameraInput: $('camera-input'),
+  cameraBtn: $('camera-btn'),
+  cameraHint: $('camera-hint'),
   text: $('wm-text'),
   presets: $('presets'),
   optDate: $('opt-date'),
@@ -26,8 +32,14 @@ const ui = {
   traceRow: $('trace-row'),
   traceCode: $('trace-code'),
   traceRegen: $('trace-regen'),
+  copiesBlock: $('copies-block'),
+  copiesDec: $('copies-dec'),
+  copiesInc: $('copies-inc'),
+  copiesCount: $('copies-count'),
+  copiesCodes: $('copies-codes'),
   color: $('wm-color'),
   swatches: $('swatches'),
+  swatchAuto: $('swatch-auto'),
   opacity: $('wm-opacity'),
   size: $('wm-size'),
   density: $('wm-density'),
@@ -36,9 +48,13 @@ const ui = {
   outSize: $('out-size'),
   outDensity: $('out-density'),
   outAngle: $('out-angle'),
+  optRandomAngle: $('opt-random-angle'),
+  tone: $('tone'),
   optWave: $('opt-wave'),
   optGuilloche: $('opt-guilloche'),
   optMicro: $('opt-micro'),
+  optWarp: $('opt-warp'),
+  optContours: $('opt-contours'),
   format: $('format'),
   downloadBtn: $('download-btn'),
   shareBtn: $('share-btn'),
@@ -47,6 +63,10 @@ const ui = {
   prevPage: $('prev-page'),
   nextPage: $('next-page'),
   pageLabel: $('page-label'),
+  copyPager: $('copy-pager'),
+  prevCopy: $('prev-copy'),
+  nextCopy: $('next-copy'),
+  copyLabel: $('copy-label'),
   empty: $('empty'),
   canvas: $('preview-canvas'),
   busy: $('busy'),
@@ -73,6 +93,14 @@ const state = {
   sourceIsPdf: false,
   pageIndex: 0,
   traceCode: newTraceCode(),
+  /** Secret seed salt: memory only, never displayed, logged or persisted. */
+  salt: createSalt(),
+  /** Copies 2..N, each with its own trace code and secret salt (copy 1 uses traceCode/salt). Memory only. */
+  extraCopies: [],
+  /** Copy shown in the preview (0-based). */
+  copyIndex: 0,
+  /** Auto contrast swatch selected instead of a fixed colour. */
+  adaptive: false,
   installPrompt: null,
   theme: 'auto',
   redactMode: 'none',
@@ -117,10 +145,27 @@ function getFormat() {
   return ui.format.querySelector('input:checked').value;
 }
 
-function getOptions() {
+function getTone() {
+  return ui.tone.querySelector('input:checked').value;
+}
+
+function newCopy() {
+  return { code: newTraceCode(), salt: createSalt() };
+}
+
+function copyCount() {
+  return 1 + state.extraCopies.length;
+}
+
+/** Trace code and secret salt of copy `index` (0 = the main trace code). */
+function copyAt(index) {
+  return index === 0 ? { code: state.traceCode, salt: state.salt } : state.extraCopies[index - 1];
+}
+
+function getOptions(copy = copyAt(state.copyIndex)) {
   const purpose = ui.text.value.trim() || t('text.default');
   const date = ui.optDate.checked ? formatDate() : '';
-  const code = ui.optTrace.checked ? state.traceCode : '';
+  const code = ui.optTrace.checked ? copy.code : '';
   const parts = [purpose, date, code && `${t('trace.prefix')} ${code}`].filter(Boolean);
   return {
     purpose,
@@ -135,7 +180,12 @@ function getOptions() {
     wave: ui.optWave.checked,
     guilloche: ui.optGuilloche.checked,
     micro: ui.optMicro.checked,
-    seed: `${state.traceCode}|${purpose}`,
+    seed: `${copy.salt}|${copy.code}|${purpose}`,
+    tone: getTone(),
+    contours: ui.optContours.checked,
+    warp: ui.optWarp.checked,
+    adaptive: state.adaptive,
+    randomAngle: ui.optRandomAngle.checked,
   };
 }
 
@@ -152,6 +202,11 @@ function savePrefs() {
     wave: ui.optWave.checked,
     guilloche: ui.optGuilloche.checked,
     micro: ui.optMicro.checked,
+    adaptive: state.adaptive,
+    randomAngle: ui.optRandomAngle.checked,
+    tone: getTone(),
+    warp: ui.optWarp.checked,
+    contours: ui.optContours.checked,
   });
 }
 
@@ -169,13 +224,19 @@ function loadPrefs() {
   ui.optWave.checked = p.wave ?? true;
   ui.optGuilloche.checked = p.guilloche ?? true;
   ui.optMicro.checked = p.micro ?? true;
+  state.adaptive = p.adaptive ?? false;
+  ui.optRandomAngle.checked = p.randomAngle ?? false;
+  ui.tone.querySelector(`input[value="${TONES.includes(p.tone) ? p.tone : 'color'}"]`).checked = true;
+  ui.optWarp.checked = p.warp ?? false;
+  ui.optContours.checked = p.contours ?? false;
 }
 
 function syncLabels() {
   ui.outOpacity.textContent = new Intl.NumberFormat(getLocale(), { style: 'percent' }).format(ui.opacity.value / 100);
   ui.outSize.textContent = `${ui.size.value}`;
   ui.outDensity.textContent = t(`density.${ui.density.value}`);
-  ui.outAngle.textContent = `${ui.angle.value}°`;
+  ui.outAngle.textContent = ui.optRandomAngle.checked ? t('look.random') : `${ui.angle.value}°`;
+  ui.angle.disabled = ui.optRandomAngle.checked;
   // Expose each slider's fill percentage to CSS (WebKit has no range-progress pseudo-element).
   for (const el of [ui.opacity, ui.size, ui.density, ui.angle]) {
     el.style.setProperty('--fill', `${((el.value - el.min) / (el.max - el.min)) * 100}%`);
@@ -183,8 +244,41 @@ function syncLabels() {
   ui.traceCode.textContent = state.traceCode;
   ui.traceRow.hidden = !ui.optTrace.checked;
   for (const btn of ui.swatches.children) {
-    btn.classList.toggle('active', btn.dataset.color.toLowerCase() === ui.color.value.toLowerCase());
+    const active = btn === ui.swatchAuto ? state.adaptive : !state.adaptive && btn.dataset.color.toLowerCase() === ui.color.value.toLowerCase();
+    btn.classList.toggle('active', active);
   }
+  syncCopies();
+}
+
+function syncCopies() {
+  const count = copyCount();
+  ui.copiesBlock.hidden = !ui.optTrace.checked;
+  ui.copiesCount.textContent = `${count}`;
+  ui.copiesDec.disabled = count <= 1;
+  ui.copiesInc.disabled = count >= MAX_COPIES;
+  ui.copiesCodes.hidden = count < 2;
+  ui.copiesCodes.replaceChildren(
+    ...Array.from({ length: count }, (_, i) => {
+      const code = document.createElement('code');
+      code.textContent = copyAt(i).code;
+      return code;
+    }),
+  );
+  ui.downloadBtn.textContent = count > 1 ? t('export.downloadCopies', { count }) : t('export.download');
+}
+
+/** Gives every copy a fresh trace code and secret salt, keeping the number of copies. */
+function regenerateCopies() {
+  state.traceCode = newTraceCode();
+  state.salt = createSalt();
+  state.extraCopies = state.extraCopies.map(newCopy);
+}
+
+function setCopyCount(count) {
+  const target = Math.min(MAX_COPIES, Math.max(1, count));
+  while (copyCount() < target) state.extraCopies.push(newCopy());
+  state.extraCopies.length = target - 1;
+  state.copyIndex = Math.min(state.copyIndex, target - 1);
 }
 
 // ---------- Loading documents ----------
@@ -301,8 +395,8 @@ async function openFiles(fileList) {
     state.sourceIsPdf = files.some(isPdf);
     state.sourceName = files[0].name.replace(/\.[^.]+$/, '');
     if (files.length > 1) state.sourceName += `-${t('file.andMore', { count: files.length - 1 })}`;
-    // A fresh document gets a fresh trace code so every shared copy is unique.
-    state.traceCode = newTraceCode();
+    // A fresh document gets fresh trace codes so every shared copy is unique.
+    regenerateCopies();
     setFormat(state.sourceIsPdf || pages.length > 1 ? 'pdf' : 'jpeg');
     syncLabels();
     renderPreview();
@@ -346,7 +440,7 @@ function renderPage(page, target, options) {
   const ctx = target.getContext('2d');
   ctx.drawImage(page.canvas, 0, 0);
   applyRedactions(ctx, target.width, target.height, page.regions);
-  drawWatermark(ctx, target.width, target.height, options);
+  renderProtected(ctx, target.width, target.height, options);
   return target;
 }
 
@@ -366,11 +460,15 @@ function renderPreview() {
     ui.shareBtn.disabled = !hasDoc;
     ui.clearBtn.hidden = !hasDoc;
     ui.pager.hidden = state.pages.length < 2;
+    ui.copyPager.hidden = !hasDoc || copyCount() < 2;
     syncRedactUi();
     if (!hasDoc) return;
     ui.pageLabel.textContent = `${state.pageIndex + 1} / ${state.pages.length}`;
     ui.prevPage.disabled = state.pageIndex === 0;
     ui.nextPage.disabled = state.pageIndex === state.pages.length - 1;
+    ui.copyLabel.textContent = t('copies.pager', { n: state.copyIndex + 1, total: copyCount() });
+    ui.prevCopy.disabled = state.copyIndex === 0;
+    ui.nextCopy.disabled = state.copyIndex === copyCount() - 1;
     renderPage(currentPage(), previewCache, getOptions());
     drawOverlay();
   });
@@ -571,35 +669,61 @@ function slug(text) {
     .slice(0, 40);
 }
 
-async function exportFiles() {
+/** Renders one copy with `options`; `progress` prefixes the busy label when exporting several copies. */
+async function exportFiles(options, progress = '') {
   const format = getFormat();
-  const options = getOptions();
   const suffix = options.code ? `${t('file.suffix')}-${options.code}` : t('file.suffix');
   const base = `${slug(state.sourceName) || t('file.document')}-${suffix}`;
   const work = document.createElement('canvas');
 
-  if (format === 'pdf') {
-    const pdfPages = [];
-    for (const [i, page] of state.pages.entries()) {
-      setBusy(t('export.renderingPage', { n: i + 1, total: state.pages.length }));
-      renderPage(page, work, options);
-      const jpeg = new Uint8Array(await (await canvasToBlob(work, 'image/jpeg', 0.9)).arrayBuffer());
-      pdfPages.push({ jpeg, pxWidth: work.width, pxHeight: work.height, ptWidth: page.ptWidth, ptHeight: page.ptHeight });
+  try {
+    if (format === 'pdf') {
+      const pdfPages = [];
+      for (const [i, page] of state.pages.entries()) {
+        setBusy(progress + t('export.renderingPage', { n: i + 1, total: state.pages.length }));
+        renderPage(page, work, options);
+        const jpeg = new Uint8Array(await (await canvasToBlob(work, 'image/jpeg', 0.9)).arrayBuffer());
+        pdfPages.push({ jpeg, pxWidth: work.width, pxHeight: work.height, ptWidth: page.ptWidth, ptHeight: page.ptHeight });
+      }
+      return [new File([buildPdf(pdfPages)], `${base}.pdf`, { type: 'application/pdf' })];
     }
-    return [new File([buildPdf(pdfPages)], `${base}.pdf`, { type: 'application/pdf' })];
-  }
 
-  const type = format === 'png' ? 'image/png' : 'image/jpeg';
-  const ext = format === 'png' ? 'png' : 'jpg';
-  const files = [];
-  for (const [i, page] of state.pages.entries()) {
-    setBusy(t('export.renderingImage', { n: i + 1, total: state.pages.length }));
-    renderPage(page, work, options);
-    const blob = await canvasToBlob(work, type, 0.9);
-    const name = state.pages.length > 1 ? `${base}-p${i + 1}.${ext}` : `${base}.${ext}`;
-    files.push(new File([blob], name, { type }));
+    const type = format === 'png' ? 'image/png' : 'image/jpeg';
+    const ext = format === 'png' ? 'png' : 'jpg';
+    const files = [];
+    for (const [i, page] of state.pages.entries()) {
+      setBusy(progress + t('export.renderingImage', { n: i + 1, total: state.pages.length }));
+      renderPage(page, work, options);
+      const blob = await canvasToBlob(work, type, 0.9);
+      const name = state.pages.length > 1 ? `${base}-p${i + 1}.${ext}` : `${base}.${ext}`;
+      files.push(new File([blob], name, { type }));
+    }
+    return files;
+  } finally {
+    // Release the full-size bitmap before the next copy is rendered.
+    work.width = work.height = 0;
   }
-  return files;
+}
+
+/** Renders every copy sequentially to keep memory bounded. */
+async function exportCopies() {
+  const total = copyCount();
+  const copies = [];
+  for (let i = 0; i < total; i++) {
+    const options = getOptions(copyAt(i));
+    const progress = total > 1 ? t('export.copyProgress', { n: i + 1, total }) : '';
+    copies.push({ options, files: await exportFiles(options, progress) });
+  }
+  return copies;
+}
+
+async function zipCopies(copies) {
+  const entries = [];
+  for (const file of copies.flatMap((c) => c.files)) {
+    entries.push({ name: file.name, data: new Uint8Array(await file.arrayBuffer()) });
+  }
+  const name = `${slug(state.sourceName) || t('file.document')}-${t('file.suffix')}-${t('file.copies', { count: copies.length })}.zip`;
+  return new File([buildZip(entries)], name, { type: 'application/zip' });
 }
 
 function downloadFile(file) {
@@ -617,10 +741,10 @@ async function withExport(action) {
   if (!state.pages.length) return;
   ui.downloadBtn.disabled = ui.shareBtn.disabled = true;
   try {
-    const files = await exportFiles();
+    const copies = await exportCopies();
     setBusy(null);
-    const done = await action(files);
-    if (done) addLogEntry(files);
+    const done = await action(copies);
+    if (done) for (const copy of copies) addLogEntry(copy.files, copy.options);
   } catch (err) {
     if (err?.name !== 'AbortError') {
       console.error(err);
@@ -633,7 +757,8 @@ async function withExport(action) {
 }
 
 async function handleDownload() {
-  await withExport(async (files) => {
+  await withExport(async (copies) => {
+    const files = copies.length > 1 ? [await zipCopies(copies)] : copies[0].files;
     for (const [i, file] of files.entries()) {
       // Small gap so browsers don't block consecutive downloads.
       if (i) await new Promise((r) => setTimeout(r, 350));
@@ -645,7 +770,10 @@ async function handleDownload() {
 }
 
 async function handleShare() {
-  await withExport(async (files) => {
+  await withExport(async (copies) => {
+    let files = copies.flatMap((c) => c.files);
+    // Several copies: share them all if the platform accepts it, otherwise one ZIP.
+    if (copies.length > 1 && !navigator.canShare?.({ files })) files = [await zipCopies(copies)];
     if (!navigator.canShare?.({ files })) {
       toast(t('export.shareUnsupported'), true);
       return false;
@@ -657,8 +785,7 @@ async function handleShare() {
 
 // ---------- Trace log ----------
 
-function addLogEntry(files) {
-  const opts = getOptions();
+function addLogEntry(files, opts) {
   const log = readJson(LOG_KEY, []);
   const last = log[0];
   if (last && last.code === opts.code && last.purpose === opts.purpose && last.file === files[0].name) return;
@@ -818,6 +945,11 @@ function bindEvents() {
     if (ui.fileInput.files.length) openFiles(ui.fileInput.files);
     ui.fileInput.value = '';
   });
+  ui.cameraBtn.addEventListener('click', () => ui.cameraInput.click());
+  ui.cameraInput.addEventListener('change', () => {
+    if (ui.cameraInput.files.length) openFiles(ui.cameraInput.files);
+    ui.cameraInput.value = '';
+  });
 
   for (const type of ['dragenter', 'dragover']) {
     ui.dropzone.addEventListener(type, (e) => {
@@ -852,22 +984,47 @@ function bindEvents() {
   });
 
   ui.swatches.addEventListener('click', (e) => {
-    const color = e.target.closest('[data-color]')?.dataset.color;
-    if (!color) return;
-    ui.color.value = color;
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    state.adaptive = btn === ui.swatchAuto;
+    if (btn.dataset.color) ui.color.value = btn.dataset.color;
     onOptionsChanged();
+  });
+  // Registered before the generic listener so the preview sees the fixed colour.
+  ui.color.addEventListener('input', () => {
+    state.adaptive = false;
+  });
+  // Copies only make sense with distinct tracking codes.
+  ui.optTrace.addEventListener('change', () => {
+    if (!ui.optTrace.checked) setCopyCount(1);
   });
 
   for (const el of [ui.text, ui.color, ui.opacity, ui.size, ui.density, ui.angle]) {
     el.addEventListener('input', onOptionsChanged);
   }
-  for (const el of [ui.optDate, ui.optTrace, ui.optWave, ui.optGuilloche, ui.optMicro]) {
+  for (const el of [ui.optDate, ui.optTrace, ui.optRandomAngle, ui.tone, ui.optWave, ui.optGuilloche, ui.optMicro, ui.optWarp, ui.optContours]) {
     el.addEventListener('change', onOptionsChanged);
   }
 
   ui.traceRegen.addEventListener('click', () => {
-    state.traceCode = newTraceCode();
+    regenerateCopies();
     onOptionsChanged();
+  });
+  ui.copiesDec.addEventListener('click', () => {
+    setCopyCount(copyCount() - 1);
+    onOptionsChanged();
+  });
+  ui.copiesInc.addEventListener('click', () => {
+    setCopyCount(copyCount() + 1);
+    onOptionsChanged();
+  });
+  ui.prevCopy.addEventListener('click', () => {
+    state.copyIndex = Math.max(0, state.copyIndex - 1);
+    renderPreview();
+  });
+  ui.nextCopy.addEventListener('click', () => {
+    state.copyIndex = Math.min(copyCount() - 1, state.copyIndex + 1);
+    renderPreview();
   });
 
   ui.prevPage.addEventListener('click', () => {
@@ -924,6 +1081,8 @@ async function registerServiceWorker() {
 function init() {
   loadPrefs();
   ui.shareBtn.hidden = !navigator.canShare;
+  // Camera capture is offered only on touch devices (phones and tablets).
+  ui.cameraBtn.hidden = ui.cameraHint.hidden = !matchMedia('(pointer: coarse)').matches;
   bindEvents();
   initUiPrefs();
   registerServiceWorker();
